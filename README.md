@@ -1,78 +1,146 @@
-# HubSpot CMS Deploy Action
+# HubSpot CMS Deploy Action — **React CMS Edition** <!-- omit in toc -->
 
-Automatically deploy a HubSpot CMS project to your account 🚀
+[![react-cms](https://img.shields.io/badge/✅%20React%20CMS-ready-orange)](https://developers.hubspot.com/docs/guides/cms/react/overview)
+[![draidel-fork](https://img.shields.io/badge/Fork%20by-Draidel%20LLC%20%E2%80%93%20HubSpot%20Partner-0A7AFF)](https://draidel.com)
 
+> **This fork adds full support for HubSpot → React CMS Developer Projects**  
+> (`hs project upload`), while keeping backward compatibility with classic "theme‐only" uploads.
 
+Deploy any HubSpot CMS **React project** or traditional theme to your portal 🚀
 
-## Usage
-In your GitHub repo, create one new [secret](https://docs.github.com/en/free-pro-team@latest/actions/reference/encrypted-secrets#creating-encrypted-secrets-for-a-repository) for:
-- `HUBSPOT_PERSONAL_ACCESS_KEY` - Your [personal access key](https://developers.hubspot.com/docs/cms/personal-cms-access-key)
+---
 
-Then create a [variable](https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables#creating-configuration-variables-for-a-repository) (in the same interface as secrets):
-- `HUBSPOT_ACCOUNT_ID` - This is your [HubSpot account ID](https://knowledge.hubspot.com/account-management/manage-multiple-hubspot-accounts#:~:text=Check%20your%20current%20account,name%20and%20unique%20Hub%20ID.)
+- [Quick Start](#quick-start)
+- [Deploying to a staging account](#deploying-to-a-staging-account)
+- [Integrating into an existing workflow](#integrating-into-an-existing-workflow)
+- [Action Spec](#action-spec)
 
-This guide walks through setting up a new workflow file that automatically uploads new changes on your `main` branch to your HubSpot CMS account. If you're adding a deployment step to an existing workflow, you can [skip ahead](#integrating-into-an-existing-workflow).
+---
 
-1. In your project, create a GitHub Action workflow file at `.github/workflows/main.yml`
-2. Copy the following example workflow into your `main.yml` file.
+## Quick Start
+
+1. **Secrets & variables**
+   | Key | Store in | Purpose |
+   |-----|----------|---------|
+   | `HUBSPOT_PERSONAL_ACCESS_KEY` | **Secrets** | Your personal CMS access key |
+   | `HUBSPOT_ACCOUNT_ID` | **Variables** | Your HubSpot **Account ID** |
+
+2. **Workflow**
+
+<details>
+<summary><strong>A) React CMS / Developer Project</strong></summary>
+
 ```yaml
 on:
   push:
-    branches:
-    - main
+    branches: [main]
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: HubSpot Deploy Action
-        uses: HubSpot/hubspot-cms-deploy-action@v2
+      - uses: actions/checkout@v4
+      - name: Deploy React CMS Project
+        uses: Draidel/hubspot-cms-deploy-action@v2
         with:
-          src_dir: <src> ## ex. src
-          dest_dir: <src> ## ex. my-theme
-          account_id: ${{ vars.hubspot_account_id || secrets.hubspot_portal_id }}
-          personal_access_key: ${{ secrets.hubspot_personal_access_key }}
+          src_dir: .                  # root where hsproject.json lives
+          force_create: true          # create the Project on first run
+          account_id: ${{ vars.HUBSPOT_ACCOUNT_ID }}
+          personal_access_key: ${{ secrets.HUBSPOT_PERSONAL_ACCESS_KEY }}
 ```
-3. Replace the `src_dir` with the directory of your CMS project in your repo
-4. Replace the `dest_dir` with the directory it should be uploaded to in your target account
-5. Commit and merge your changes
 
-*Note:* Do not change the `account_id` or `personal_access_key` values in your workflow. Auth related values should only be stored as GitHub secrets.
+</details>
 
-### Deploying to a staging account
-If you'd like to auto-deploy to a staging account you have in HubSpot, you can create an additional workflow that runs on `push` to your associated stanging branch in your repo.
+<details>
+<summary><strong>B) Classic HubSpot Theme</strong></summary>
+
 ```yaml
 on:
   push:
-    branches:
-    - qa
-...
-account_id: ${{ vars.hubspot_account_id || secrets.hubspot_portal_id }}
+    branches: [main]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy Theme
+        uses: Draidel/hubspot-cms-deploy-action@v2
+        with:
+          src_dir: src                # local theme folder
+          dest_dir: my-theme          # target path in HubSpot
+          account_id: ${{ vars.HUBSPOT_ACCOUNT_ID }}
+          personal_access_key: ${{ secrets.HUBSPOT_PERSONAL_ACCESS_KEY }}
 ```
 
-### Integrating into an existing workflow
-To add HubSpot CMS deployment as a step in an existing GitHub Action workflow, add the following step:
+</details>
+
+> **Why two modes?**
+> *React CMS* projects bundle build tooling, serverless functions, extensions UI, etc. and require `hs project upload`.
+> Traditional themes are flat code/assets and use the older `hs upload`.
+
+---
+
+## Deploying to a staging account
+
+<details>
+<summary>Show example</summary>
+
 ```yaml
-- name: HubSpot Deploy Action
-  uses: HubSpot/hubspot-cms-deploy-action@v2
-  with:
-    src_dir: <src> ## ex. src
-    dest_dir: <src> ## ex. my-theme
-    account_id: ${{ vars.hubspot_account_id || secrets.hubspot_portal_id }}
-    personal_access_key: ${{ secrets.hubspot_personal_access_key }}
+# same action, different branch & account
+on:
+  push:
+    branches: [qa]
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Draidel/hubspot-cms-deploy-action@v2
+        with:
+          src_dir: .
+          force_create: true
+          account_id: ${{ vars.HUBSPOT_ACCOUNT_ID }}   # staging ID
+          personal_access_key: ${{ secrets.HUBSPOT_PERSONAL_ACCESS_KEY }}
 ```
 
-*Note:* You can configure your action to run based on different criteria, such as pushing to a QA branch. Learn more about events that trigger actions [here](https://docs.github.com/en/actions/reference/events-that-trigger-workflows).
+</details>
+
+---
+
+## Integrating into an existing workflow
+
+```yaml
+- name: Deploy to HubSpot (React CMS)
+  uses: Draidel/hubspot-cms-deploy-action@v2
+  with:
+    src_dir: .
+    force_create: true
+    account_id: ${{ vars.HUBSPOT_ACCOUNT_ID }}
+    personal_access_key: ${{ secrets.HUBSPOT_PERSONAL_ACCESS_KEY }}
+```
+
+---
 
 ## Action Spec
-### Inputs
-- `src_dir` - Project directory relative to the repo
-- `dest_dir` - Target directory in HubSpot
 
-### Variables
-- `HUBSPOT_ACCOUNT_ID` - Target account id
-### Secrets
-- `HUBSPOT_PERSONAL_ACCESS_KEY` - Authentication key
-#### Deprecated secret
-- `HUBSPOT_PORTAL_ID` - Target account id. This was deprecated in favor of `HUBSPOT_ACCOUNT_ID`, this is more consistent with how we refer to accounts, additionally we moved it to be a variable since GitHub variables now exist and allow for you to be able to see and modify the value. The Account ID does not need the same protection that an authentication key does.
+| Input                 | Required | Description                                         |
+| --------------------- | -------- | --------------------------------------------------- |
+| `src_dir`             | ✔        | Root of the **React CMS project** *or* theme folder |
+| `dest_dir`            | —        | Only for classic themes (`hs upload`)               |
+| `force_create`        | —        | `true` → creates the Project if it doesn't exist    |
+| `account_id`          | ✔        | HubSpot Account ID                                  |
+| `personal_access_key` | ✔        | HubSpot personal access key                         |
+
+---
+
+Made with ❤️ by **[Draidel LLC – HubSpot Gold Partner](https://www.draidel.com)**
+
+Feel free to open issues or PRs!
+
+### Key Changes
+
+* **Title and badge**: immediately highlight "React CMS Edition"
+* **One-line intro**: explains that `hs project upload` compatibility was added
+* **Collapsible sections**: clearly separate React CMS vs. classic theme workflows
+* **Input table** and examples focused primarily on *React CMS*
+
+Copy this block to your `README.md`, commit, and you're ready to go! 🟢
